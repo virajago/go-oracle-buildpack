@@ -205,6 +205,35 @@ fi
 
 export GOPATH
 
+# Do this for setting up Oracle client
+
+#Copy and unzip files
+mkdir -p "${build}/oracle-client"
+cp $BUILDPACK_PATH/oracle-client/* "${build}/oracle-client/"
+cd "${build}/oracle-client"
+tar -xvzf "oracle_includes.tar.gz"
+tar -xvzf "oracle_libs.tar.gz"
+
+#Setup env vars for compilation
+export LD_LIBRARY_PATH="${build}/oracle-client/oracle/12.1/client64/lib/:${LD_LIBRARY_PATH}"
+echo $LD_LIBRARY_PATH
+export PKG_CONFIG_PATH="${build}/oracle-client:${PKG_CONFIG_PATH}"
+echo $PKG_CONFIG_PATH
+
+echo "prefix=${build}/oracle-client/oracle/12.1/client64" > ${build}/oracle-client/oci8.pc
+echo "includedir=${build}/oracle-client/oracle/12.1/client64" >> ${build}/oracle-client/oci8.pc
+echo "libdir=${build}/oracle-client/oracle/12.1/client64/lib" >> ${build}/oracle-client/oci8.pc
+echo "" >> ${build}/oracle-client/oci8.pc
+echo "Name: oci8" >> ${build}/oracle-client/oci8.pc
+echo "Description: Oracle Instant Client" >> ${build}/oracle-client/oci8.pc
+echo "Version: 12.1" >> ${build}/oracle-client/oci8.pc
+echo 'Cflags: -I${includedir}' >> ${build}/oracle-client/oci8.pc
+echo 'Libs: -L${libdir} -lclntsh' >> ${build}/oracle-client/oci8.pc
+
+#Setup oracle library path when the container starts
+mkdir -p $build/.profile.d
+echo 'export LD_LIBRARY_PATH=/home/vcap/app/oracle-client/oracle/12.1/client64/lib/' > $build/.profile.d/setuporacle.sh
+
 case ${TOOL} in
     godep)
         eval "$(setupGOPATH ${name})"
@@ -271,32 +300,6 @@ case ${TOOL} in
     ;;
     go_nativevendoring)
         eval "$(setupGOPATH ${name})"
-        cd "$BUILDPACK_PATH/oracle-client"
-        mkdir -p "${src}/oracle-client"
-        cp $BUILDPACK_PATH/oracle-client/* "${src}/oracle-client/"
-        cd "${src}/oracle-client"
-        tar -xvzf "oracle_includes.tar.gz"
-        tar -xvzf "oracle_libs.tar.gz"
-        echo $LD_LIBRARY_PATH
-        export LD_LIBRARY_PATH="${src}/oracle-client/oracle/12.1/client64/lib/:${LD_LIBRARY_PATH}"
-        echo $LD_LIBRARY_PATH
-        echo $ORACLE_HOME
-        export ORACLE_HOME="${src}/oracle-client/oracle/12.1/client64:${ORACLE_HOME}"
-        echo $ORACLE_HOME
-
-        echo "prefix=${src}/oracle-client/oracle/12.1/client64" > ${src}/oci8.pc
-        echo "includedir=${src}/oracle-client/oracle/12.1/client64" >> ${src}/oci8.pc
-        echo "libdir=${src}/oracle-client/oracle/12.1/client64/lib" >> ${src}/oci8.pc
-        echo "" >> ${src}/oci8.pc
-        echo "Name: oci8" >> ${src}/oci8.pc
-        echo "Description: Oracle Instant Client" >> ${src}/oci8.pc
-        echo "Version: 12.1" >> ${src}/oci8.pc
-        echo 'Cflags: -I${includedir}' >> ${src}/oci8.pc
-        echo 'Libs: -L${libdir} -lclntsh' >> ${src}/oci8.pc
-
-        echo $PKG_CONFIG_PATH
-        export PKG_CONFIG_PATH="${src}:${PKG_CONFIG_PATH}"
-        echo $PKG_CONFIG_PATH
 
         pkgs=${GO_INSTALL_PACKAGE_SPEC-"default"}
         handleDefaultPkgSpec
